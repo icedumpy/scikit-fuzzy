@@ -684,29 +684,29 @@ class CrispValueCalculator(object):
         return new_universe, output_mf, term_mfs
 
     def find_memberships_nd(self, idx):
-        """
+        '''
         Index-aware version of find_memberships(), expecting to select a
         particular set of membership values from an array input, given input
         ``idx``.
-        """
+        '''
         # Find potentially new values
         new_values = []
 
         for label, term in self.var.terms.items():
-            term._cut = term.membership_value[self.sim][idx]
-            if term._cut is None:
+            try:
+                term._cut = term.membership_value[self.sim][idx]
+            except TypeError:
+                term._cut = None
                 continue  # No membership defined for this adjective
 
             # Faster to aggregate as list w/duplication
-            interp = _interp_universe_fast(self.var.universe,
-                                           term.mf,
-                                           term._cut).tolist()
-            # assert isinstance(interp, List)
-            new_values.extend(interp)
+            new_values.extend(
+                _interp_universe_fast(
+                    self.var.universe, term.mf, term._cut).tolist())
 
         new_universe = np.union1d(self.var.universe, new_values)
 
-        # Initialize membership
+        # Initilize membership
         output_mf = np.zeros_like(new_universe, dtype=np.float64)
 
         # Build output membership function
@@ -715,9 +715,8 @@ class CrispValueCalculator(object):
             if term._cut is None:
                 continue  # No membership defined for this adjective
 
-            upsampled_mf = interp_membership(self.var.universe,
-                                             term.mf,
-                                             new_universe)
+            upsampled_mf = interp_membership(
+                self.var.universe, term.mf, new_universe)
 
             term_mfs[label] = np.minimum(term._cut, upsampled_mf)
             np.maximum(output_mf, term_mfs[label], output_mf)
